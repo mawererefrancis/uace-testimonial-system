@@ -342,7 +342,6 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       const subjectsStr = s["Subjects"] || "";
 
       // ---------- IMPROVED TOKENIZATION ----------
-      // Split on whitespace, then combine any token starting with '[' with the previous token.
       const parts = subjectsStr.toString().split(/\s+/);
       const combinedTokens = [];
       for (let i = 0; i < parts.length; i++) {
@@ -361,44 +360,44 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
         const parsed = parseSubjectEntry(token);
         if (parsed) {
           parsed.fullName = SUBJECT_NAMES[parsed.code] || parsed.code;
+          // Calculate points for this subject
+          if (parsed.isSubsidiary) {
+            parsed.points = (parsed.overallGrade >= 1 && parsed.overallGrade <= 6) ? 1 : 0;
+          } else {
+            parsed.points = GRADE_POINTS[parsed.overallGrade] || 0;
+          }
           subjectDetails.push(parsed);
         }
       });
 
-      // Determine maximum number of papers for this candidate
-      const maxPapers = Math.max(...subjectDetails.map(s => s.paperGrades.length), 0);
+      // Fixed number of paper columns: 5 (P1..P5)
+      const maxPapers = 5;
 
       const gender = sex === "M" ? "MALE" : sex === "F" ? "FEMALE" : sex;
       const genderCode = sex === "M" ? "M" : sex === "F" ? "F" : "X";
       const serialNumber = `UNEB/UACE/${genderCode}/${String(serialCounter).padStart(3, '0')}/2025`;
       serialCounter++;
 
-      // ----- Compute result statistics -----
-      let principalPasses = 0;      // A-E in principle subjects
-      let subsidiaryPasses = 0;     // 1-6 in subsidiary + O in principle
+      // ----- Compute result statistics (same as before) -----
+      let principalPasses = 0;
+      let subsidiaryPasses = 0;
       let totalPoints = 0;
 
       subjectDetails.forEach(subj => {
         if (subj.isSubsidiary) {
-          // subsidiary subject
-          const grade = subj.overallGrade; // numeric 1-9
+          const grade = subj.overallGrade;
           if (grade >= 1 && grade <= 6) {
             subsidiaryPasses += 1;
-            totalPoints += 1; // subsidiary pass gives 1 point
+            totalPoints += 1;
           }
-          // else 0 points
         } else {
-          // principle subject
-          const grade = subj.overallGrade; // letter
+          const grade = subj.overallGrade;
           if (grade === 'O') {
-            subsidiaryPasses += 1; // counts as subsidiary pass
-            totalPoints += 1; // O gives 1 point
+            subsidiaryPasses += 1;
+            totalPoints += 1;
           } else if (['A','B','C','D','E'].includes(grade)) {
             principalPasses += 1;
-            totalPoints += GRADE_POINTS[grade] || 0;
-          } else {
-            // F gives 0 points
-            totalPoints += 0;
+            totalPoints += GRADE_POINTS[grade];
           }
         }
       });
@@ -406,14 +405,14 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       const id = uuidv4();
       DATABASE[id] = {
         name, indexNo, sex: gender, dob, year: "2025", serialNumber,
-        resCode,                          // store the Res. Code from Excel
+        resCode,
         subjectDetails,
         principalPasses,
         subsidiaryPasses,
         totalPoints
       };
 
-      // QR data now includes school name, Res. Code, and computed stats
+      // QR data includes points per subject
       const qrData = JSON.stringify({
         school: SETTINGS.schoolName,
         name, indexNo, sex: gender, dob, year: "2025", serialNumber,
@@ -425,6 +424,7 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
           code: s.code,
           name: s.fullName,
           grade: s.overallGrade,
+          points: s.points,
           papers: s.paperGrades
         }))
       });
@@ -437,15 +437,13 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       const writeStream = fs.createWriteStream(filePath);
       doc.pipe(writeStream);
 
-      // ---------- THICK, PROFESSIONAL BORDER ----------
+      // ---------- THICK BORDERS (unchanged) ----------
       const borderMargin = 12;
       const borderWidth = doc.page.width - 2 * borderMargin;
       const borderHeight = doc.page.height - 2 * borderMargin;
       const cornerRadius = 20;
-      // Outer border (thick dark blue)
       doc.roundedRect(borderMargin, borderMargin, borderWidth, borderHeight, cornerRadius)
          .lineWidth(4).strokeColor("#1b4f6e").stroke();
-      // Inner border (thinner gold accent)
       doc.roundedRect(borderMargin + 4, borderMargin + 4, borderWidth - 8, borderHeight - 8, cornerRadius)
          .lineWidth(2).strokeColor("#c9a959").stroke();
 
@@ -471,105 +469,118 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       // Title
       doc.fontSize(14).fillColor("#1b4f6e").text("UACE TESTIMONIAL 2025", 0, titleY, { align: "center", underline: true });
 
-      // ---------- CANDIDATE DETAILS BOX ----------
+      // ---------- CANDIDATE DETAILS BOX (with bold name) ----------
       const boxLeft = 45;
       const boxWidth = 520;
       const boxPadding = 10;
-      const nameLength = name.length;
-      const boxHeight = nameLength > 35 ? 120 : 100;
       const boxTop = 210;
+
+      // Determine box height based on name length (may need extra if long)
+      const nameLineHeight = 16; // for larger font
+      const nameLines = Math.ceil(name.length / 50); // rough estimate
+      const boxHeight = 80 + (nameLines > 1 ? 20 : 0); // at least 100
 
       doc.roundedRect(boxLeft, boxTop, boxWidth, boxHeight, 5).lineWidth(1.5).strokeColor("#1b4f6e").stroke();
 
-      doc.fontSize(11).fillColor("black");
-      if (nameLength > 35) {
-        const nameParts = name.split(' ');
-        const midPoint = Math.ceil(nameParts.length / 2);
-        const line1 = nameParts.slice(0, midPoint).join(' ');
-        const line2 = nameParts.slice(midPoint).join(' ');
-        doc.text(`CANDIDATE'S NAME: ${line1}`, boxLeft + boxPadding, boxTop + boxPadding);
-        doc.text(`${line2}`, boxLeft + boxPadding + 120, boxTop + boxPadding + 18);
-        doc.text(`INDEX NO: ${indexNo}`, boxLeft + 300, boxTop + boxPadding);
-        doc.text(`SEX: ${gender}`, boxLeft + boxPadding, boxTop + boxPadding + 40);
-        doc.text(`DoB: ${dob}`, boxLeft + 200, boxTop + boxPadding + 40);
-        doc.text("LIN............................................", boxLeft + boxPadding, boxTop + boxPadding + 60);
-      } else {
-        doc.text(`CANDIDATE'S NAME: ${name}`, boxLeft + boxPadding, boxTop + boxPadding);
-        doc.text(`INDEX NO: ${indexNo}`, boxLeft + 300, boxTop + boxPadding);
-        doc.text(`SEX: ${gender}`, boxLeft + boxPadding, boxTop + boxPadding + 20);
-        doc.text(`DoB: ${dob}`, boxLeft + 200, boxTop + boxPadding + 20);
-        doc.text("LIN............................................", boxLeft + boxPadding, boxTop + boxPadding + 40);
-      }
+      // Candidate name (bold, larger)
+      doc.fontSize(14).font("Helvetica-Bold").fillColor("black");
+      doc.text(`CANDIDATE'S NAME: ${name}`, boxLeft + boxPadding, boxTop + boxPadding, { width: 300 });
 
-      // ---------- SUBJECT TABLE (Subjects as rows, Papers as columns) ----------
+      // Other details (normal font)
+      doc.fontSize(11).font("Helvetica").fillColor("black");
+      doc.text(`INDEX NO: ${indexNo}`, boxLeft + 350, boxTop + boxPadding);
+      doc.text(`SEX: ${gender}`, boxLeft + boxPadding, boxTop + boxPadding + 25);
+      doc.text(`DoB: ${dob}`, boxLeft + 200, boxTop + boxPadding + 25);
+      doc.text("LIN............................................", boxLeft + boxPadding, boxTop + boxPadding + 50);
+
+      // ---------- FULL-WIDTH TABLE (Subject, P1..P5, Overall, Points) ----------
       const tableTop = boxTop + boxHeight + 25;
-      const colSubject = 50;            // start of Subject column
-      const colFirstPaper = 200;         // start of first paper column
-      const paperColWidth = 35;          // width per paper column
-      const colOverall = colFirstPaper + maxPapers * paperColWidth + 10; // Overall grade column
-      const rowHeight = 28;
+      const leftMargin = 45;
+      const rightMargin = 45;
+      const tableWidth = doc.page.width - leftMargin - rightMargin; // ≈ 595 - 90 = 505
+
+      // Define column widths
+      const colSubject = leftMargin;
+      const subjectWidth = 170;
+      const paperColWidth = 35; // 5 papers * 35 = 175
+      const overallWidth = 60;
+      const pointsWidth = 40;
+      // Total used = 170+175+60+40 = 445, leaving 60 for spacing (30 on each side) – we'll spread evenly
+      // Adjust to use full width: we can increase subject or paper widths slightly.
+      // For simplicity, we'll keep as is and center the table with auto margins.
+
+      const colFirstPaper = colSubject + subjectWidth + 5; // small gap
+      const colOverall = colFirstPaper + 5 * paperColWidth + 5;
+      const colPoints = colOverall + overallWidth + 5;
+      const rowHeight = 30;
       let y = tableTop;
 
       // Table header background
-      doc.rect(colSubject - 2, y - 2, (colOverall + 60) - colSubject + 4, rowHeight)
+      doc.rect(colSubject - 2, y - 2, colPoints + pointsWidth - colSubject + 4, rowHeight)
          .fillColor("#1b4f6e").fill();
 
       doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
       doc.text("SUBJECT", colSubject + 5, y + 8);
       for (let i = 1; i <= maxPapers; i++) {
-        doc.text(`P${i}`, colFirstPaper + (i-1)*paperColWidth + 8, y + 8);
+        doc.text(`P${i}`, colFirstPaper + (i-1)*paperColWidth + 10, y + 8, { width: paperColWidth, align: "center" });
       }
-      doc.text("OVERALL", colOverall + 5, y + 8);
+      doc.text("OVERALL", colOverall + 5, y + 8, { width: overallWidth, align: "center" });
+      doc.text("PTS", colPoints + 5, y + 8, { width: pointsWidth, align: "center" });
       y += rowHeight;
 
-      // Reset fill color for rows
+      // Reset fill color
       doc.fillColor("black");
 
-      // Draw vertical lines (thick)
-      doc.lineWidth(1.5).strokeColor("#1b4f6e");
+      // Draw vertical lines (full height)
+      doc.lineWidth(1).strokeColor("#1b4f6e");
       doc.moveTo(colSubject, tableTop).lineTo(colSubject, y + subjectDetails.length * rowHeight + 5).stroke();
-      for (let i = 0; i <= maxPapers; i++) {
+      doc.moveTo(colFirstPaper, tableTop).lineTo(colFirstPaper, y + subjectDetails.length * rowHeight + 5).stroke();
+      for (let i = 1; i <= maxPapers; i++) {
         const x = colFirstPaper + i * paperColWidth;
         doc.moveTo(x, tableTop).lineTo(x, y + subjectDetails.length * rowHeight + 5).stroke();
       }
       doc.moveTo(colOverall, tableTop).lineTo(colOverall, y + subjectDetails.length * rowHeight + 5).stroke();
-      doc.moveTo(colOverall + 60, tableTop).lineTo(colOverall + 60, y + subjectDetails.length * rowHeight + 5).stroke();
+      doc.moveTo(colPoints, tableTop).lineTo(colPoints, y + subjectDetails.length * rowHeight + 5).stroke();
+      doc.moveTo(colPoints + pointsWidth, tableTop).lineTo(colPoints + pointsWidth, y + subjectDetails.length * rowHeight + 5).stroke();
 
       // Horizontal header line
-      doc.moveTo(colSubject, tableTop + rowHeight).lineTo(colOverall + 60, tableTop + rowHeight).stroke();
+      doc.moveTo(colSubject, tableTop + rowHeight).lineTo(colPoints + pointsWidth, tableTop + rowHeight).stroke();
 
       // Data rows
-      subjectDetails.forEach((subj, idx) => {
-        // Subject name (may wrap)
+      subjectDetails.forEach((subj) => {
+        // Subject (left aligned, vertical center)
         doc.font("Helvetica").fontSize(10);
-        doc.text(subj.fullName, colSubject + 5, y + 5, { width: colFirstPaper - colSubject - 10 });
+        doc.text(subj.fullName, colSubject + 5, y + 5, { width: subjectWidth - 10 });
 
-        // Paper grades
+        // Paper columns (centered)
         for (let i = 1; i <= maxPapers; i++) {
           const paper = subj.paperGrades.find(p => p.paper === i);
           const gradeText = paper ? paper.grade.toString() : "";
-          doc.text(gradeText, colFirstPaper + (i-1)*paperColWidth + 12, y + 8, { width: paperColWidth - 5, align: "center" });
+          doc.text(gradeText, colFirstPaper + (i-1)*paperColWidth + 2, y + 8, { width: paperColWidth, align: "center" });
         }
 
-        // Overall grade (big & bold)
+        // Overall grade (big & bold, centered)
         doc.font("Helvetica-Bold").fontSize(16).fillColor("#1b4f6e");
-        doc.text(subj.overallGrade.toString(), colOverall + 15, y, { width: 50 });
+        doc.text(subj.overallGrade.toString(), colOverall + 2, y, { width: overallWidth, align: "center" });
+
+        // Points (centered)
+        doc.font("Helvetica").fontSize(10).fillColor("black");
+        doc.text(subj.points.toString(), colPoints + 2, y + 8, { width: pointsWidth, align: "center" });
 
         y += rowHeight;
-        doc.fillColor("black");
       });
 
       // Horizontal lines between rows
       doc.lineWidth(0.5).strokeColor("#cccccc");
       for (let i = 0; i <= subjectDetails.length; i++) {
         const lineY = tableTop + rowHeight + i * rowHeight;
-        doc.moveTo(colSubject, lineY).lineTo(colOverall + 60, lineY).stroke();
+        doc.moveTo(colSubject, lineY).lineTo(colPoints + pointsWidth, lineY).stroke();
       }
 
       // ---------- RESULT STATISTICS BOX (Res. Code, Principal Passes, Subsidiary Passes, Total Points) ----------
       const statsY = y + 20;
-      const statsBoxX = 45;
-      const statsBoxWidth = 520;
+      const statsBoxX = leftMargin;
+      const statsBoxWidth = tableWidth;
       const statsBoxHeight = 60;
       doc.roundedRect(statsBoxX, statsY, statsBoxWidth, statsBoxHeight, 5)
          .lineWidth(1.5).strokeColor("#1b4f6e").stroke();
@@ -618,10 +629,10 @@ app.get("/verify/:id", (req, res) => {
   if (!s) return res.send("<h2>Invalid Certificate</h2>");
   let subjectsHtml = '';
   if (s.subjectDetails) {
-    subjectsHtml = '<h3>Subjects</h3><table border="1" cellpadding="5" style="border-collapse: collapse; width:100%;"><tr><th>Subject</th><th>Overall Grade</th><th>Paper Grades</th></tr>';
+    subjectsHtml = '<h3>Subjects</h3><table border="1" cellpadding="5" style="border-collapse: collapse; width:100%;"><tr><th>Subject</th><th>Overall Grade</th><th>Points</th><th>Paper Grades</th></tr>';
     s.subjectDetails.forEach(subj => {
       const papers = subj.paperGrades.map(p => `P${p.paper}:${p.grade}`).join(', ');
-      subjectsHtml += `<tr><td>${subj.fullName || subj.code}</td><td><strong>${subj.overallGrade}</strong></td><td>${papers}</td></tr>`;
+      subjectsHtml += `<tr><td>${subj.fullName || subj.code}</td><td><strong>${subj.overallGrade}</strong></td><td>${subj.points || 0}</td><td>${papers}</td></tr>`;
     });
     subjectsHtml += '</table>';
   }
@@ -640,7 +651,6 @@ app.get("/verify/:id", (req, res) => {
       table{width:100%; border-collapse: collapse; margin-top:20px;}
       th{background:#1b4f6e; color:white; padding:8px;}
       td{padding:8px; border:1px solid #ccc;}
-      .stats { background: #eef7ff; padding: 10px; border-radius: 8px; margin-top: 20px; }
     </style>
   </head>
   <body>

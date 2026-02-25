@@ -287,7 +287,7 @@ function DASHBOARD_HTML() {
       <div class="box">
         <h3>📊 Generate UACE Testimonials</h3>
         <p><strong>Excel columns (as in sample):</strong> IndexNo, Sex, Candidate_Name, Res. Code, DATE OF BIRTH, Subjects</p>
-        <p><strong>Subjects format:</strong> e.g., <code>HIS-9 [1-6,2-7,3-7] GEO-8 [1-5,2-6] ENG-A [1-3,2-4]</code></p>
+        <p><strong>Subjects format:</strong> e.g., <code>GEP-5 [1-5]  ENT-O [1-9,2-8,3-5]  CRE-O [1-4,2-5,4-9]</code></p>
         <form action="/generate" method="POST" enctype="multipart/form-data">
           <input type="file" name="excel" accept=".xlsx, .xls, .csv" required>
           <button>Generate ZIP with PDFs</button>
@@ -341,10 +341,22 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       const dob = s["DATE OF BIRTH"] || "";               // Correct column header
       const subjectsStr = s["Subjects"] || "";
 
-      // Parse subjects
-      const tokens = subjectsStr.toString().split(/\s+/);
+      // ---------- IMPROVED TOKENIZATION ----------
+      // Split on whitespace, then combine any token starting with '[' with the previous token.
+      const parts = subjectsStr.toString().split(/\s+/);
+      const combinedTokens = [];
+      for (let i = 0; i < parts.length; i++) {
+        if (parts[i].startsWith('[')) {
+          if (combinedTokens.length > 0) {
+            combinedTokens[combinedTokens.length - 1] += ' ' + parts[i];
+          }
+        } else {
+          combinedTokens.push(parts[i]);
+        }
+      }
+
       const subjectDetails = [];
-      tokens.forEach(token => {
+      combinedTokens.forEach(token => {
         if (!token.includes('-') || !token.includes('[')) return;
         const parsed = parseSubjectEntry(token);
         if (parsed) {

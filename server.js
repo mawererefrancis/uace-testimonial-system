@@ -22,6 +22,13 @@ const upload = multer({ dest: "uploads/" });
 const ADMIN_USERNAME = "admin";
 const HASHED_PASSWORD = bcrypt.hashSync("admin123", 10);
 
+// Developer info
+const DEVELOPER = {
+  name: "Mawerere Francis",
+  phone: "0788223215",
+  whatsapp: "+256788223215"
+};
+
 // ================== SETTINGS ==================
 let SETTINGS = {
   schoolName: "RUBONGI ARMY SECONDARY SCHOOL",
@@ -122,7 +129,7 @@ function parseSubjectEntry(entry) {
   return { code, overallGrade, isSubsidiary: isSub, paperGrades };
 }
 
-// ================== LOGIN PAGE ==================
+// ================== LOGIN PAGE (with developer credit) ==================
 app.get("/", (req, res) => {
   res.send(`
   <!DOCTYPE html>
@@ -148,8 +155,10 @@ app.get("/", (req, res) => {
         width: 100%;
         max-width: 420px;
         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        text-align: center;
       }
-      h2 { color: #1b4f6e; margin-bottom: 30px; text-align: center; }
+      h2 { color: #1b4f6e; margin-bottom: 10px; }
+      .sub { color: #2d5a7a; margin-bottom: 30px; font-weight: 500; border-bottom: 1px dashed #a0c0d0; padding-bottom: 15px; }
       input {
         width: 100%;
         padding: 15px;
@@ -157,8 +166,9 @@ app.get("/", (req, res) => {
         border: 2px solid #e0e0e0;
         border-radius: 10px;
         font-size: 16px;
+        transition: 0.3s;
       }
-      input:focus { border-color: #1b4f6e; outline: none; }
+      input:focus { border-color: #1b4f6e; outline: none; box-shadow: 0 0 0 3px rgba(27,79,110,0.2); }
       button {
         width: 100%;
         padding: 15px;
@@ -170,18 +180,33 @@ app.get("/", (req, res) => {
         font-weight: 600;
         cursor: pointer;
         margin-top: 20px;
+        transition: 0.3s;
       }
-      button:hover { background: #123a4f; }
+      button:hover { background: #123a4f; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+      .developer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px dashed #a0c0d0;
+        color: #1b4f6e;
+        font-size: 1rem;
+      }
+      .developer span { font-weight: 700; }
+      .developer small { display: block; font-size: 0.9rem; color: #2d5a7a; margin-top: 5px; }
     </style>
   </head>
   <body>
     <div class="card">
-      <h2>🔐 UACE Admin Login</h2>
+      <h2>🎓 UACE</h2>
+      <div class="sub">Testimonial Generator</div>
       <form method="POST" action="/dashboard">
         <input name="username" placeholder="Username" required autofocus>
         <input name="password" type="password" placeholder="Password" required>
-        <button>Login</button>
+        <button>🔐 Login & Access</button>
       </form>
+      <div class="developer">
+        <span>Developed by ${DEVELOPER.name}</span><br>
+        <small>📞 Tel: ${DEVELOPER.phone} &nbsp; | &nbsp; WhatsApp: ${DEVELOPER.whatsapp}</small>
+      </div>
     </div>
   </body>
   </html>
@@ -195,6 +220,7 @@ app.post("/dashboard", async (req, res) => {
   res.send(DASHBOARD_HTML());
 });
 
+// ================== PROFESSIONAL DASHBOARD ==================
 function DASHBOARD_HTML() {
   return `
   <!DOCTYPE html>
@@ -206,96 +232,116 @@ function DASHBOARD_HTML() {
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
         font-family: 'Segoe UI', Roboto, sans-serif;
-        background: #f0f5f9;
+        background: #f0f7fc;
         padding: 30px 20px;
       }
-      .container { max-width: 900px; margin: 0 auto; }
-      h1 {
-        color: #1b4f6e;
-        margin-bottom: 30px;
-        border-left: 8px solid #1b4f6e;
-        padding-left: 20px;
+      .container { max-width: 1100px; margin: 0 auto; }
+      .header {
+        display: flex; justify-content: space-between; align-items: center;
+        background: white; padding: 20px 30px; border-radius: 60px;
+        box-shadow: 0 10px 30px rgba(0,40,60,0.1); margin-bottom: 30px;
       }
-      .box {
-        background: white;
-        border-radius: 16px;
-        padding: 30px;
-        margin-bottom: 30px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+      .header h1 {
+        color: #1b4f6e; font-weight: 700; font-size: 1.8rem;
+        display: flex; align-items: center; gap: 10px;
       }
-      h3 { color: #1b4f6e; margin-bottom: 20px; }
-      input, textarea, button, input[type="file"] {
-        width: 100%;
-        padding: 12px 16px;
-        margin: 8px 0;
-        border: 2px solid #d9e2e9;
-        border-radius: 10px;
-        font-size: 1rem;
-        font-family: inherit;
+      .header h1 span { background: #1b4f6e; color: white; padding: 5px 12px; border-radius: 40px; font-size: 0.9rem; }
+      .logout-btn {
+        background: #c44545; color: white; border: none; padding: 10px 25px;
+        border-radius: 40px; font-weight: 600; cursor: pointer;
+        transition: 0.3s; text-decoration: none; display: inline-block;
       }
-      input:focus, textarea:focus { border-color: #1b4f6e; outline: none; }
+      .logout-btn:hover { background: #a33; transform: scale(1.05); }
+      .grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px; margin-bottom: 30px;
+      }
+      .card {
+        background: white; border-radius: 28px; padding: 30px;
+        box-shadow: 0 15px 30px rgba(0,50,70,0.1);
+        border: 1px solid rgba(27,79,110,0.2);
+      }
+      .card h3 {
+        color: #1b4f6e; font-size: 1.3rem; margin-bottom: 20px;
+        display: flex; align-items: center; gap: 10px;
+      }
+      .card h3 i { font-size: 1.5rem; }
+      input, textarea, button, .file-label {
+        width: 100%; padding: 12px 16px; margin: 8px 0;
+        border: 2px solid #d9e6f0; border-radius: 16px;
+        font-size: 1rem; font-family: inherit; transition: 0.2s;
+      }
+      input:focus, textarea:focus { border-color: #1b4f6e; outline: none; box-shadow: 0 0 0 3px rgba(27,79,110,0.2); }
       button {
-        background: #1b4f6e;
-        color: white;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        margin-top: 15px;
+        background: #1b4f6e; color: white; font-weight: 600; border: none;
+        cursor: pointer; margin-top: 15px; border-radius: 40px;
       }
-      button:hover { background: #123a4f; }
-      .logout { text-align: right; margin-bottom: 20px; }
-      .logout a { color: #c44545; text-decoration: none; }
+      button:hover { background: #123a4f; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+      .file-label {
+        background: #e6f0f5; color: #1b4f6e; font-weight: 500; text-align: center;
+        border-style: dashed; cursor: pointer; display: inline-block;
+      }
+      .file-label:hover { background: #d4e3ed; }
+      input[type="file"] { display: none; }
       .footer {
-        text-align: center;
-        margin-top: 40px;
-        padding: 20px;
-        background: white;
-        border-radius: 16px;
-        color: #1b4f6e;
+        text-align: center; margin-top: 40px; padding: 20px;
+        background: white; border-radius: 60px; color: #1b4f6e;
+        box-shadow: 0 10px 30px rgba(0,40,60,0.1);
       }
+      hr { border: none; border-top: 2px dashed #c0d9e8; margin: 30px 0; }
     </style>
   </head>
   <body>
     <div class="container">
-      <div class="logout"><a href="/">← Logout</a></div>
-      <h1>📋 UACE Testimonial Generator</h1>
-
-      <div class="box">
-        <h3>🖼️ Upload Logos</h3>
-        <form action="/upload-assets" method="POST" enctype="multipart/form-data">
-          <input type="file" name="logo1" accept="image/*" required>
-          <input type="file" name="logo2" accept="image/*" required>
-          <button>Upload Logos</button>
-        </form>
+      <div class="header">
+        <h1>📋 UACE Testimonial <span>Admin</span></h1>
+        <a href="/" class="logout-btn">🚪 Logout</a>
       </div>
 
-      <div class="box">
-        <h3>⚙️ School Settings</h3>
-        <form method="POST" action="/settings">
-          <input name="schoolName" placeholder="School Name" value="${SETTINGS.schoolName}">
-          <input name="address" placeholder="Address & Phone" value="${SETTINGS.address}">
-          <textarea name="vision" placeholder="Vision">${SETTINGS.vision}</textarea>
-          <textarea name="mission" placeholder="Mission">${SETTINGS.mission}</textarea>
-          <input name="footer" placeholder="Footer Motto" value="${SETTINGS.footer}">
-          <input name="headTeacher" placeholder="Head Teacher Name" value="${SETTINGS.headTeacher}">
-          <input name="headTeacherRank" placeholder="Head Teacher Rank" value="${SETTINGS.headTeacherRank}">
-          <input name="headTeacherTitle" placeholder="Head Teacher Title" value="${SETTINGS.headTeacherTitle}">
-          <button>Save Settings</button>
-        </form>
-      </div>
+      <div class="grid">
+        <!-- Logos Card -->
+        <div class="card">
+          <h3><i>🖼️</i> Upload Logos</h3>
+          <form action="/upload-assets" method="POST" enctype="multipart/form-data">
+            <label class="file-label" for="logo1">Choose Logo 1</label>
+            <input type="file" name="logo1" id="logo1" accept="image/*" required>
+            <label class="file-label" for="logo2">Choose Logo 2</label>
+            <input type="file" name="logo2" id="logo2" accept="image/*" required>
+            <button>📤 Upload Logos</button>
+          </form>
+        </div>
 
-      <div class="box">
-        <h3>📊 Generate UACE Testimonials</h3>
-        <p><strong>Excel columns (as in sample):</strong> IndexNo, Sex, Candidate_Name, Res. Code, DATE OF BIRTH, Subjects</p>
-        <p><strong>Subjects format:</strong> e.g., <code>GEP-5 [1-5]  ENT-O [1-9,2-8,3-5]  CRE-O [1-4,2-5,4-9]</code></p>
-        <form action="/generate" method="POST" enctype="multipart/form-data">
-          <input type="file" name="excel" accept=".xlsx, .xls, .csv" required>
-          <button>Generate ZIP with PDFs</button>
-        </form>
+        <!-- Settings Card -->
+        <div class="card">
+          <h3><i>⚙️</i> School Settings</h3>
+          <form method="POST" action="/settings">
+            <input name="schoolName" placeholder="School Name" value="${SETTINGS.schoolName}">
+            <input name="address" placeholder="Address & Phone" value="${SETTINGS.address}">
+            <textarea name="vision" placeholder="Vision">${SETTINGS.vision}</textarea>
+            <textarea name="mission" placeholder="Mission">${SETTINGS.mission}</textarea>
+            <input name="footer" placeholder="Footer Motto" value="${SETTINGS.footer}">
+            <input name="headTeacher" placeholder="Head Teacher Name" value="${SETTINGS.headTeacher}">
+            <input name="headTeacherRank" placeholder="Rank" value="${SETTINGS.headTeacherRank}">
+            <input name="headTeacherTitle" placeholder="Title" value="${SETTINGS.headTeacherTitle}">
+            <button>💾 Save Settings</button>
+          </form>
+        </div>
+
+        <!-- Generate Card -->
+        <div class="card">
+          <h3><i>📊</i> Generate Testimonials</h3>
+          <p style="margin-bottom:15px;color:#2d5a7a;">Upload Excel file with columns:<br> <strong>IndexNo, Sex, Candidate_Name, Res. Code, DATE OF BIRTH, Subjects</strong></p>
+          <form action="/generate" method="POST" enctype="multipart/form-data">
+            <label class="file-label" for="excel">📂 Choose Excel File</label>
+            <input type="file" name="excel" id="excel" accept=".xlsx,.xls,.csv" required>
+            <button>⚡ Generate ZIP with PDFs</button>
+          </form>
+        </div>
       </div>
 
       <div class="footer">
-        <p><strong>Mawerere Francis</strong> · 0788223215 · mawererefrancis@gmail.com</p>
+        <p><strong>${DEVELOPER.name}</strong> · 📞 ${DEVELOPER.phone} · ✉️ mawererefrancis@gmail.com</p>
+        <p>💬 WhatsApp: ${DEVELOPER.whatsapp}</p>
       </div>
     </div>
   </body>
@@ -309,13 +355,13 @@ app.post("/upload-assets", upload.fields([
 ]), (req, res) => {
   LOGO1 = req.files.logo1[0].path;
   LOGO2 = req.files.logo2[0].path;
-  res.send("✅ Logos uploaded. <a href='/dashboard'>Back</a>");
+  res.send("✅ Logos uploaded. <a href='/dashboard'>Back to Dashboard</a>");
 });
 
 // ================== SETTINGS ==================
 app.post("/settings", (req, res) => {
   SETTINGS = { ...SETTINGS, ...req.body };
-  res.send("✅ Settings updated. <a href='/dashboard'>Back</a>");
+  res.send("✅ Settings updated. <a href='/dashboard'>Back to Dashboard</a>");
 });
 
 // ================== GENERATE UACE TESTIMONIALS ==================
@@ -337,8 +383,8 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       const name = s["Candidate_Name"] || "";
       const indexNo = s["IndexNo"] || "";
       const sex = s["Sex"] || "";
-      const resCode = s["Res. Code"] || "";               // Directly from Excel
-      const dob = s["DATE OF BIRTH"] || "";               // Correct column header
+      const resCode = s["Res. Code"] || "";
+      const dob = s["DATE OF BIRTH"] || "";
       const subjectsStr = s["Subjects"] || "";
 
       // ---------- IMPROVED TOKENIZATION ----------
@@ -378,7 +424,7 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       const serialNumber = `UNEB/UACE/${genderCode}/${String(serialCounter).padStart(3, '0')}/2025`;
       serialCounter++;
 
-      // ----- Compute result statistics (same as before) -----
+      // ----- Compute result statistics -----
       let principalPasses = 0;
       let subsidiaryPasses = 0;
       let totalPoints = 0;
@@ -469,54 +515,58 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       // Title
       doc.fontSize(14).fillColor("#1b4f6e").text("UACE TESTIMONIAL 2025", 0, titleY, { align: "center", underline: true });
 
-      // ---------- CANDIDATE DETAILS BOX (with bold name) ----------
+      // ---------- CANDIDATE DETAILS BOX (with name size 16, label size 12) ----------
       const boxLeft = 45;
       const boxWidth = 520;
       const boxPadding = 10;
       const boxTop = 210;
 
-      // Determine box height based on name length (may need extra if long)
-      const nameLineHeight = 16; // for larger font
-      const nameLines = Math.ceil(name.length / 50); // rough estimate
-      const boxHeight = 80 + (nameLines > 1 ? 20 : 0); // at least 100
+      // Determine box height based on name length
+      const nameLineHeight = 16;
+      const nameLines = Math.ceil(name.length / 50);
+      const boxHeight = 80 + (nameLines > 1 ? 20 : 0);
 
       doc.roundedRect(boxLeft, boxTop, boxWidth, boxHeight, 5).lineWidth(1.5).strokeColor("#1b4f6e").stroke();
 
-      // Candidate name (bold, larger)
-      doc.fontSize(14).font("Helvetica-Bold").fillColor("black");
-      doc.text(`CANDIDATE'S NAME: ${name}`, boxLeft + boxPadding, boxTop + boxPadding, { width: 300 });
+      // Candidate name label (size 12)
+      doc.fontSize(12).font("Helvetica").fillColor("black");
+      doc.text("CANDIDATE'S NAME:", boxLeft + boxPadding, boxTop + boxPadding, { continued: true });
+      // Name itself (size 16 bold)
+      doc.fontSize(16).font("Helvetica-Bold").text(` ${name}`, { continued: false });
 
-      // Other details (normal font)
+      // Other details (size 11)
       doc.fontSize(11).font("Helvetica").fillColor("black");
       doc.text(`INDEX NO: ${indexNo}`, boxLeft + 350, boxTop + boxPadding);
       doc.text(`SEX: ${gender}`, boxLeft + boxPadding, boxTop + boxPadding + 25);
       doc.text(`DoB: ${dob}`, boxLeft + 200, boxTop + boxPadding + 25);
       doc.text("LIN............................................", boxLeft + boxPadding, boxTop + boxPadding + 50);
 
-      // ---------- FULL-WIDTH TABLE (Subject, P1..P5, Overall, Points) ----------
+      // ---------- FULL-WIDTH TABLE WITH ROUNDED BACKGROUND ----------
       const tableTop = boxTop + boxHeight + 25;
       const leftMargin = 45;
       const rightMargin = 45;
-      const tableWidth = doc.page.width - leftMargin - rightMargin; // ≈ 595 - 90 = 505
+      const tableWidth = doc.page.width - leftMargin - rightMargin; // ≈ 505
 
-      // Define column widths
+      // Define column widths (subject: 170, 5 papers: 35 each, overall: 60, points: 40) = 445, leaving 60 for margins
       const colSubject = leftMargin;
       const subjectWidth = 170;
-      const paperColWidth = 35; // 5 papers * 35 = 175
+      const paperColWidth = 35;
       const overallWidth = 60;
       const pointsWidth = 40;
-      // Total used = 170+175+60+40 = 445, leaving 60 for spacing (30 on each side) – we'll spread evenly
-      // Adjust to use full width: we can increase subject or paper widths slightly.
-      // For simplicity, we'll keep as is and center the table with auto margins.
-
-      const colFirstPaper = colSubject + subjectWidth + 5; // small gap
+      const colFirstPaper = colSubject + subjectWidth + 5;
       const colOverall = colFirstPaper + 5 * paperColWidth + 5;
       const colPoints = colOverall + overallWidth + 5;
+      const tableRight = colPoints + pointsWidth;
       const rowHeight = 30;
       let y = tableTop;
 
-      // Table header background
-      doc.rect(colSubject - 2, y - 2, colPoints + pointsWidth - colSubject + 4, rowHeight)
+      // Draw rounded rectangle behind the table (light grey fill, dark blue border)
+      doc.roundedRect(leftMargin - 3, y - 3, tableWidth + 6, subjectDetails.length * rowHeight + rowHeight + 8, 10)
+         .fillColor("#f5f5f5").fill()
+         .strokeColor("#1b4f6e").lineWidth(2).stroke();
+
+      // Table header background (dark blue)
+      doc.rect(colSubject - 2, y - 2, tableRight - colSubject + 4, rowHeight)
          .fillColor("#1b4f6e").fill();
 
       doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
@@ -528,23 +578,23 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       doc.text("PTS", colPoints + 5, y + 8, { width: pointsWidth, align: "center" });
       y += rowHeight;
 
-      // Reset fill color
+      // Reset fill color for rows
       doc.fillColor("black");
 
-      // Draw vertical lines (full height)
+      // Draw vertical lines (full height) – but they will be on top of the grey background
       doc.lineWidth(1).strokeColor("#1b4f6e");
-      doc.moveTo(colSubject, tableTop).lineTo(colSubject, y + subjectDetails.length * rowHeight + 5).stroke();
-      doc.moveTo(colFirstPaper, tableTop).lineTo(colFirstPaper, y + subjectDetails.length * rowHeight + 5).stroke();
+      doc.moveTo(colSubject, tableTop).lineTo(colSubject, y + subjectDetails.length * rowHeight + 2).stroke();
+      doc.moveTo(colFirstPaper, tableTop).lineTo(colFirstPaper, y + subjectDetails.length * rowHeight + 2).stroke();
       for (let i = 1; i <= maxPapers; i++) {
         const x = colFirstPaper + i * paperColWidth;
-        doc.moveTo(x, tableTop).lineTo(x, y + subjectDetails.length * rowHeight + 5).stroke();
+        doc.moveTo(x, tableTop).lineTo(x, y + subjectDetails.length * rowHeight + 2).stroke();
       }
-      doc.moveTo(colOverall, tableTop).lineTo(colOverall, y + subjectDetails.length * rowHeight + 5).stroke();
-      doc.moveTo(colPoints, tableTop).lineTo(colPoints, y + subjectDetails.length * rowHeight + 5).stroke();
-      doc.moveTo(colPoints + pointsWidth, tableTop).lineTo(colPoints + pointsWidth, y + subjectDetails.length * rowHeight + 5).stroke();
+      doc.moveTo(colOverall, tableTop).lineTo(colOverall, y + subjectDetails.length * rowHeight + 2).stroke();
+      doc.moveTo(colPoints, tableTop).lineTo(colPoints, y + subjectDetails.length * rowHeight + 2).stroke();
+      doc.moveTo(tableRight, tableTop).lineTo(tableRight, y + subjectDetails.length * rowHeight + 2).stroke();
 
       // Horizontal header line
-      doc.moveTo(colSubject, tableTop + rowHeight).lineTo(colPoints + pointsWidth, tableTop + rowHeight).stroke();
+      doc.moveTo(colSubject, tableTop + rowHeight).lineTo(tableRight, tableTop + rowHeight).stroke();
 
       // Data rows
       subjectDetails.forEach((subj) => {
@@ -559,9 +609,9 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
           doc.text(gradeText, colFirstPaper + (i-1)*paperColWidth + 2, y + 8, { width: paperColWidth, align: "center" });
         }
 
-        // Overall grade (big & bold, centered)
+        // Overall grade (centered vertically and horizontally)
         doc.font("Helvetica-Bold").fontSize(16).fillColor("#1b4f6e");
-        doc.text(subj.overallGrade.toString(), colOverall + 2, y, { width: overallWidth, align: "center" });
+        doc.text(subj.overallGrade.toString(), colOverall + 2, y + 2, { width: overallWidth, align: "center" });
 
         // Points (centered)
         doc.font("Helvetica").fontSize(10).fillColor("black");
@@ -574,10 +624,10 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       doc.lineWidth(0.5).strokeColor("#cccccc");
       for (let i = 0; i <= subjectDetails.length; i++) {
         const lineY = tableTop + rowHeight + i * rowHeight;
-        doc.moveTo(colSubject, lineY).lineTo(colPoints + pointsWidth, lineY).stroke();
+        doc.moveTo(colSubject, lineY).lineTo(tableRight, lineY).stroke();
       }
 
-      // ---------- RESULT STATISTICS BOX (Res. Code, Principal Passes, Subsidiary Passes, Total Points) ----------
+      // ---------- RESULT STATISTICS BOX ----------
       const statsY = y + 20;
       const statsBoxX = leftMargin;
       const statsBoxWidth = tableWidth;
@@ -596,8 +646,8 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       doc.fontSize(11).font("Helvetica-Oblique").fillColor("#1b4f6e")
          .text(SETTINGS.footer, 50, mottoY, { align: "center" });
 
-      // ---------- SIGNATURE BLOCK ----------
-      const sigY = mottoY + 40;
+      // ---------- SIGNATURE BLOCK (double space after motto) ----------
+      const sigY = mottoY + 80; // double the previous 40
       const sigX = 350;
       doc.fontSize(11).font("Helvetica").fillColor("black");
       doc.text("....................................", sigX, sigY - 10);

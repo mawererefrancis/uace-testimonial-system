@@ -305,8 +305,8 @@ function DASHBOARD_HTML() {
           <form action="/upload-assets" method="POST" enctype="multipart/form-data">
             <label class="file-label" for="logo1">Choose Logo 1</label>
             <input type="file" name="logo1" id="logo1" accept="image/*" required>
-            <label class="file-label" for="logo2">Choose Logo 2</label>
-            <input type="file" name="logo2" id="logo2" accept="image/*" required>
+            <label class="file-label" for="logo2">Choose Logo 2 (optional)</label>
+            <input type="file" name="logo2" id="logo2" accept="image/*">
             <button>📤 Upload Logos</button>
           </form>
         </div>
@@ -321,7 +321,7 @@ function DASHBOARD_HTML() {
             <textarea name="mission" placeholder="Mission">${SETTINGS.mission}</textarea>
             <input name="footer" placeholder="Footer Motto" value="${SETTINGS.footer}">
             <input name="headTeacher" placeholder="Head Teacher Name" value="${SETTINGS.headTeacher}">
-            <input name="headTeacherRank" placeholder="Rank" value="${SETTINGS.headTeacherRank}">
+            <input name="headTeacherRank" placeholder="Rank (optional)" value="${SETTINGS.headTeacherRank}">
             <input name="headTeacherTitle" placeholder="Title" value="${SETTINGS.headTeacherTitle}">
             <button>💾 Save Settings</button>
           </form>
@@ -353,8 +353,8 @@ function DASHBOARD_HTML() {
 app.post("/upload-assets", upload.fields([
   { name: "logo1" }, { name: "logo2" }
 ]), (req, res) => {
-  LOGO1 = req.files.logo1[0].path;
-  LOGO2 = req.files.logo2[0].path;
+  if (req.files.logo1) LOGO1 = req.files.logo1[0].path;
+  if (req.files.logo2) LOGO2 = req.files.logo2[0].path;
   res.send("✅ Logos uploaded. <a href='/dashboard'>Back to Dashboard</a>");
 });
 
@@ -483,7 +483,7 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       const writeStream = fs.createWriteStream(filePath);
       doc.pipe(writeStream);
 
-      // ---------- THICK BORDERS (unchanged) ----------
+      // ---------- THICK BORDERS ----------
       const borderMargin = 12;
       const borderWidth = doc.page.width - 2 * borderMargin;
       const borderHeight = doc.page.height - 2 * borderMargin;
@@ -496,7 +496,7 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       // ---------- SERIAL NUMBER ----------
       doc.fontSize(8).fillColor("#1b4f6e").text(serialNumber, 45, 45);
 
-      // ---------- LOGOS ----------
+      // ---------- LOGOS (optional) ----------
       const titleY = 170;
       const logoHeight = 70;
       if (LOGO1 && fs.existsSync(LOGO1)) {
@@ -515,7 +515,7 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       // Title
       doc.fontSize(14).fillColor("#1b4f6e").text("UACE TESTIMONIAL 2025", 0, titleY, { align: "center", underline: true });
 
-      // ---------- CANDIDATE DETAILS BOX (with name size 16, label size 12) ----------
+      // ---------- CANDIDATE DETAILS BOX (name size 13.5, label 12) ----------
       const boxLeft = 45;
       const boxWidth = 520;
       const boxPadding = 10;
@@ -531,8 +531,8 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       // Candidate name label (size 12)
       doc.fontSize(12).font("Helvetica").fillColor("black");
       doc.text("CANDIDATE'S NAME:", boxLeft + boxPadding, boxTop + boxPadding, { continued: true });
-      // Name itself (size 16 bold)
-      doc.fontSize(16).font("Helvetica-Bold").text(` ${name}`, { continued: false });
+      // Name itself (size 13.5 bold)
+      doc.fontSize(13.5).font("Helvetica-Bold").text(` ${name}`, { continued: false });
 
       // Other details (size 11)
       doc.fontSize(11).font("Helvetica").fillColor("black");
@@ -581,7 +581,7 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       // Reset fill color for rows
       doc.fillColor("black");
 
-      // Draw vertical lines (full height) – but they will be on top of the grey background
+      // Draw vertical lines (full height) – on top of grey background
       doc.lineWidth(1).strokeColor("#1b4f6e");
       doc.moveTo(colSubject, tableTop).lineTo(colSubject, y + subjectDetails.length * rowHeight + 2).stroke();
       doc.moveTo(colFirstPaper, tableTop).lineTo(colFirstPaper, y + subjectDetails.length * rowHeight + 2).stroke();
@@ -646,14 +646,21 @@ app.post("/generate", upload.single("excel"), async (req, res) => {
       doc.fontSize(11).font("Helvetica-Oblique").fillColor("#1b4f6e")
          .text(SETTINGS.footer, 50, mottoY, { align: "center" });
 
-      // ---------- SIGNATURE BLOCK (double space after motto) ----------
-      const sigY = mottoY + 80; // double the previous 40
+      // ---------- SIGNATURE BLOCK (conditionally include rank) ----------
+      const sigY = mottoY + 80; // double space
       const sigX = 350;
       doc.fontSize(11).font("Helvetica").fillColor("black");
       doc.text("....................................", sigX, sigY - 10);
       doc.text(SETTINGS.headTeacher, sigX, sigY);
-      doc.text(SETTINGS.headTeacherRank, sigX, sigY + 18);
-      doc.text(SETTINGS.headTeacherTitle, sigX, sigY + 36);
+
+      // Only print rank if it exists and is not just whitespace
+      if (SETTINGS.headTeacherRank && SETTINGS.headTeacherRank.trim() !== '') {
+        doc.text(SETTINGS.headTeacherRank, sigX, sigY + 18);
+        doc.text(SETTINGS.headTeacherTitle, sigX, sigY + 36);
+      } else {
+        // If no rank, title goes where rank would have been
+        doc.text(SETTINGS.headTeacherTitle, sigX, sigY + 18);
+      }
 
       // ---------- QR CODE ----------
       const qrY = sigY + 70;
